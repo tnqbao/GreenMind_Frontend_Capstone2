@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
-import { LayoutDashboard, TreePine, FileText, Users, MessageSquare, LogOut, User, Brain, CheckCircle, Leaf } from "lucide-react"
+import { LayoutDashboard, TreePine, FileText, Users, MessageSquare, LogOut, User, Brain, CheckCircle, Leaf, MapPin } from "lucide-react"
 import { useAuth } from "@/contexts/AuthContext"
 import { Button } from "@/components/ui/button"
 import {
@@ -51,6 +51,11 @@ const navItems = [
     title: "Models Verify",
     href: "/dashboard/models-verify",
     icon: CheckCircle,
+  },
+  {
+    title: "Activity Monitoring",
+    href: "/dashboard/activity-monitoring",
+    icon: MapPin,
   },
   // Temporarily hidden - Daily Verify
   // {
