@@ -18,15 +18,15 @@ interface MapViewProps {
 // Color helpers
 // ---------------------------------------------------------------------------
 const WARD_FILL: Record<string, string> = {
-  red:    "#ef4444",
+  red: "#ef4444",
   yellow: "#f59e0b",
-  green:  "#10b981",
+  green: "#10b981",
 };
 
 const HOUSEHOLD_FILL: Record<string, string> = {
-  red:    "#ef4444",
+  red: "#ef4444",
   yellow: "#f59e0b",
-  green:  "#10b981",
+  green: "#10b981",
 };
 
 // ---------------------------------------------------------------------------
@@ -40,11 +40,11 @@ export function MapView({
   loading,
 }: MapViewProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
-  const mapRef          = useRef<L.Map | null>(null);
-  const wardLayerRef    = useRef<L.LayerGroup | null>(null);
+  const mapRef = useRef<L.Map | null>(null);
+  const wardLayerRef = useRef<L.LayerGroup | null>(null);
   const householdLayerRef = useRef<L.LayerGroup | null>(null);
-  const [mapLoaded,   setMapLoaded]   = useState(false);
-  const [viewLevel,   setViewLevel]   = useState<"ward" | "household">("ward");
+  const [mapLoaded, setMapLoaded] = useState(false);
+  const [viewLevel, setViewLevel] = useState<"ward" | "household">("ward");
   const [activeWardId, setActiveWardId] = useState<number | null>(null);
 
   // -------------------------------------------------------------------------
@@ -54,9 +54,9 @@ export function MapView({
     if (!mapContainerRef.current || mapRef.current) return;
 
     const map = L.map(mapContainerRef.current, {
-      center:           [16.065, 108.225],
-      zoom:             13,
-      zoomControl:      false,
+      center: [16.065, 108.225],
+      zoom: 13,
+      zoomControl: false,
       attributionControl: false,
     });
 
@@ -67,7 +67,7 @@ export function MapView({
     L.control.zoom({ position: "topleft" }).addTo(map);
     L.control.attribution({ position: "bottomleft", prefix: false }).addTo(map);
 
-    wardLayerRef.current      = L.layerGroup().addTo(map);
+    wardLayerRef.current = L.layerGroup().addTo(map);
     householdLayerRef.current = L.layerGroup().addTo(map);
 
     mapRef.current = map;
@@ -95,21 +95,21 @@ export function MapView({
       // --- Heatmap glow circle (radius proportional to waste) ---
       const glowRadius = 250 + (ward.totalWaste / 5000) * 600;
       L.circle([ward.lat, ward.lng], {
-        radius:      glowRadius,
+        radius: glowRadius,
         fillColor,
         fillOpacity: 0.18,
-        stroke:      false,
+        stroke: false,
         interactive: false,
-        pane:        "overlayPane",
+        pane: "overlayPane",
       }).addTo(wardLayerRef.current!);
 
       // --- Ward polygon ---
       if (ward.bounds && ward.bounds.length >= 3) {
         const latlngs = ward.bounds.map(([lat, lng]) => [lat, lng] as [number, number]);
         const poly = L.polygon(latlngs, {
-          color:       fillColor,
-          weight:      2.5,
-          opacity:     0.9,
+          color: fillColor,
+          weight: 2.5,
+          opacity: 0.9,
           fillColor,
           fillOpacity: 0.28,
         }).addTo(wardLayerRef.current!);
@@ -142,8 +142,8 @@ export function MapView({
 
       const labelIcon = L.divIcon({
         className: "ward-label-icon",
-        iconSize:  [140, 52],
-        iconAnchor:[70, 26],
+        iconSize: [140, 52],
+        iconAnchor: [70, 26],
         html: `
           <div style="
             display:flex;flex-direction:column;align-items:center;
@@ -174,7 +174,7 @@ export function MapView({
         .addTo(wardLayerRef.current!)
         .on("click", () => handleWardClick(ward));
     });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [areas]);
 
   // -------------------------------------------------------------------------
@@ -196,10 +196,10 @@ export function MapView({
     if (ward.bounds && ward.bounds.length >= 3) {
       const latlngs = ward.bounds.map(([lat, lng]) => [lat, lng] as [number, number]);
       L.polygon(latlngs, {
-        color:       WARD_FILL[ward.status],
-        weight:      2,
-        opacity:     0.4,
-        fillColor:   WARD_FILL[ward.status],
+        color: WARD_FILL[ward.status],
+        weight: 2,
+        opacity: 0.4,
+        fillColor: WARD_FILL[ward.status],
         fillOpacity: 0.06,
         interactive: false,
       }).addTo(householdLayerRef.current!);
@@ -208,8 +208,8 @@ export function MapView({
     // Draw ward name label
     const wardLabelIcon = L.divIcon({
       className: "ward-banner-icon",
-      iconSize:  [200, 28],
-      iconAnchor:[100, 14],
+      iconSize: [200, 28],
+      iconAnchor: [100, 14],
       html: `
         <div style="
           background:${WARD_FILL[ward.status]};
@@ -225,25 +225,25 @@ export function MapView({
 
     // Draw household markers
     households.forEach((hh) => {
-      const color  = HOUSEHOLD_FILL[hh.status] ?? "#6b7280";
+      const color = HOUSEHOLD_FILL[hh.status] ?? "#6b7280";
       const radius = 60 + (hh.waste / 600) * 120; // 60–180m
 
       // Glow effect
       L.circle([hh.lat, hh.lng], {
-        radius:      radius * 2.2,
-        fillColor:   color,
+        radius: radius * 2.2,
+        fillColor: color,
         fillOpacity: 0.1,
-        stroke:      false,
+        stroke: false,
         interactive: false,
       }).addTo(householdLayerRef.current!);
 
       // Main circle
       const circle = L.circle([hh.lat, hh.lng], {
         radius,
-        fillColor:   color,
+        fillColor: color,
         fillOpacity: 0.75,
-        color:       "white",
-        weight:      2,
+        color: "white",
+        weight: 2,
       }).addTo(householdLayerRef.current!);
 
       const statusLabel = hh.status === "red" ? "⚠️ Cao" : hh.status === "yellow" ? "〰️ Trung bình" : "✅ Thấp";
@@ -259,7 +259,7 @@ export function MapView({
     // Fly to ward
     if (ward.bounds && ward.bounds.length >= 3) {
       const latLngs = ward.bounds.map(([lat, lng]) => L.latLng(lat, lng));
-      const bounds  = L.latLngBounds(latLngs);
+      const bounds = L.latLngBounds(latLngs);
       map.flyToBounds(bounds.pad(0.2), { duration: 0.8, maxZoom: 16 });
     } else {
       map.flyTo([ward.lat, ward.lng], 16, { duration: 0.8 });

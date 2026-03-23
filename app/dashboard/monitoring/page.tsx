@@ -16,12 +16,12 @@ const MapView = dynamic(
 );
 
 export default function MonitoringPage() {
-  const [areas]     = useState<UrbanArea[]>(WARDS);
-  const [reports,   setReports]   = useState<Report[]>([]);
-  const [summary,   setSummary]   = useState<Summary | null>(null);
-  const [loading,   setLoading]   = useState(true);
+  const [areas] = useState<UrbanArea[]>(WARDS);
+  const [reports, setReports] = useState<Report[]>([]);
+  const [summary, setSummary] = useState<Summary | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const [selectedArea,      setSelectedArea]      = useState<UrbanArea | null>(null);
+  const [selectedArea, setSelectedArea] = useState<UrbanArea | null>(null);
   const [highlightAreaName, setHighlightAreaName] = useState<string | null>(null);
 
   // Fetch summary + reports from service; use WARDS as static area data
@@ -35,33 +35,33 @@ export default function MonitoringPage() {
 
         setReports(
           reportsData.map((r) => ({
-            id:     parseInt(r.id.replace(/\D/g, "")) || Math.floor(Math.random() * 1000),
-            area:   r.area.name,
-            desc:   r.description,
+            id: parseInt(r.id.replace(/\D/g, "")) || Math.floor(Math.random() * 1000),
+            area: r.area.name,
+            desc: r.description,
             status: r.status === "collected" ? "done" : (r.status as any),
-            time:   new Date(r.reported_at).toLocaleTimeString("vi-VN", {
-              hour:   "2-digit",
+            time: new Date(r.reported_at).toLocaleTimeString("vi-VN", {
+              hour: "2-digit",
               minute: "2-digit",
             }),
           }))
         );
 
         setSummary({
-          totalWaste:    WARDS.reduce((s, w) => s + w.totalWaste, 0),
-          urbanAreas:    WARDS.length,
+          totalWaste: WARDS.reduce((s, w) => s + w.totalWaste, 0),
+          urbanAreas: WARDS.length,
           pendingReports: reportsData.filter((r) => r.status === "pending").length,
           wasteDistribution: {
             plastic: overviewData.avgPlastic,
             organic: 100 - overviewData.avgPlastic - 20,
-            other:   20,
+            other: 20,
           },
         });
       } catch (err) {
         console.error("Failed to fetch monitoring data:", err);
         // Fallback summary from ward data alone
         setSummary({
-          totalWaste:    WARDS.reduce((s, w) => s + w.totalWaste, 0),
-          urbanAreas:    WARDS.length,
+          totalWaste: WARDS.reduce((s, w) => s + w.totalWaste, 0),
+          urbanAreas: WARDS.length,
           pendingReports: WARDS.reduce((s, w) => s + w.reports, 0),
           wasteDistribution: { plastic: 42, organic: 38, other: 20 },
         });
@@ -111,7 +111,7 @@ export default function MonitoringPage() {
             </span>
             <span className="text-xs text-gray-400 font-medium">
               Cập nhật: {new Date().toLocaleTimeString("vi-VN", {
-                hour:   "2-digit",
+                hour: "2-digit",
                 minute: "2-digit",
               })}
             </span>
