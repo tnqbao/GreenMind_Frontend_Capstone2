@@ -11,6 +11,7 @@ import {
   Brain,
   CheckCircle,
   MapPin,
+  Wind,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -23,6 +24,7 @@ const navItems = [
   { title: "Verify",        href: "/dashboard/models-verify", icon: CheckCircle },
   { title: "Waste Report",  href: "/dashboard/waste-report",   icon: MapPin },
   { title: "Giám sát rác",  href: "/dashboard/garbage-analytics", icon: MapPin },
+  { title: "Env. Impact",   href: "/dashboard/environmental-impact", icon: Wind },
   { title: "Users",         href: "/dashboard/users-ocean",  icon: Brain },
 ]
 
