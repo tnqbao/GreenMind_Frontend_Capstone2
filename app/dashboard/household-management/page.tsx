@@ -22,11 +22,12 @@ export default function HouseholdManagementPage() {
     const summary = useMemo(() => {
         const totalWastePerDay = allHouseholds.reduce((acc, hh) => acc + hh.waste, 0);
         const totalReports = allHouseholds.reduce((acc, hh) => acc + hh.reportCount, 0);
+        const totalImageUploads = allHouseholds.reduce((acc, hh) => acc + (hh.imageHistory?.length ?? 0), 0);
         const red = allHouseholds.filter((hh) => hh.status === "red").length;
         const yellow = allHouseholds.filter((hh) => hh.status === "yellow").length;
         const green = allHouseholds.filter((hh) => hh.status === "green").length;
 
-        return { totalWastePerDay, totalReports, red, yellow, green };
+        return { totalWastePerDay, totalReports, totalImageUploads, red, yellow, green };
     }, [allHouseholds]);
 
     return (
@@ -40,8 +41,8 @@ export default function HouseholdManagementPage() {
                     <div className="text-sm text-slate-600 space-y-2 rounded-xl bg-white p-3 shadow-sm border border-gray-200">
                         <p>Hộ dân: <strong>{allHouseholds.length}</strong></p>
                         <p>Ngày: <strong>{new Date().toLocaleDateString("vi-VN")}</strong></p>
-                        <p>Tổng rác/ngày: <strong>{summary.totalWastePerDay.toFixed(1)} kg</strong></p>
-                        <p>Báo cáo: <strong>{summary.totalReports}</strong></p>
+                        <p>Tổng số lần chụp rác: <strong>{summary.totalReports}</strong></p>
+                        <p>Tổng lần upload ảnh: <strong>{summary.totalImageUploads}</strong></p>
                         <p>Trạng thái:
                             <span className="ml-2 px-2 py-1 rounded-md bg-red-100 text-red-700">{summary.red}</span>
                             <span className="ml-2 px-2 py-1 rounded-md bg-amber-100 text-amber-700">{summary.yellow}</span>
