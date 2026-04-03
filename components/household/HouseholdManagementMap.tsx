@@ -65,12 +65,13 @@ export function HouseholdManagementMap({ households, selectedHouseholdId, onHous
             }).addTo(markerLayerRef.current!);
 
             marker.bindTooltip(`
-        <div style="font-family:system-ui;font-size:12px;min-width:150px;">
+        <div style="font-family:system-ui;font-size:12px;min-width:170px;line-height:1.4;">
           <strong>${household.name}</strong><br/>
           ${household.address}<br/>
-          Rác: ${household.waste.toFixed(1)} kg/ngày
+          <strong>Rác:</strong> ${household.waste.toFixed(1)} kg/ngày<br/>
+          <span style="font-size:11px;color:#4b5563">Báo cáo: ${household.reportCount}</span>
         </div>
-      `, { direction: "top", offset: [0, -10], className: "monitoring-leaflet-tooltip" });
+      `, { direction: "top", offset: [0, -8], className: "monitoring-leaflet-tooltip" });
 
             marker.on("click", () => onHouseholdSelect(household));
 
@@ -82,8 +83,20 @@ export function HouseholdManagementMap({ households, selectedHouseholdId, onHous
     }, [households, selectedHouseholdId, onHouseholdSelect]);
 
     return (
-        <div className="relative w-full h-full rounded-2xl overflow-hidden border border-gray-100 shadow-sm">
+        <div className="relative w-full h-full rounded-2xl overflow-hidden border border-gray-100 shadow-lg">
             <div ref={mapContainerRef} className="w-full h-full" />
+
+            <div className="absolute top-3 left-3 z-20 rounded-xl border border-white/40 bg-white/80 backdrop-blur px-3 py-2 text-xs text-slate-700 shadow-sm">
+                <div className="font-semibold text-sm">Household Map</div>
+                <div className="flex items-center gap-2 mt-1">
+                    <span className="inline-block w-2 h-2 rounded-full bg-emerald-500" />
+                    <span>Green</span>
+                    <span className="inline-block w-2 h-2 rounded-full bg-amber-500" />
+                    <span>Yellow</span>
+                    <span className="inline-block w-2 h-2 rounded-full bg-red-500" />
+                    <span>Red</span>
+                </div>
+            </div>
 
             {(loading || !mapRef.current) && (
                 <div className="absolute inset-0 bg-white/70 flex items-center justify-center z-10">

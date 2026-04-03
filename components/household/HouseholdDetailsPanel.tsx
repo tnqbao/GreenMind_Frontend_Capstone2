@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
+import { User, Users, TrendingUp, CalendarDays, BarChart3 } from "lucide-react";
 import type { HouseholdProfile, WasteReport } from "@/types/monitoring";
 
 interface HouseholdDetailsPanelProps {
@@ -20,25 +21,6 @@ export function HouseholdDetailsPanel({ household, reports }: HouseholdDetailsPa
         return reports.filter((r) => r.householdId === household.id);
     }, [household, reports]);
 
-    const historyItems = useMemo(() => {
-        if (!household) return [];
-
-        const imageByDate = new Map<string, typeof household.imageHistory[0]>();
-        household.imageHistory.forEach((image) => {
-            const key = new Date(image.uploadedAt).toDateString();
-            imageByDate.set(key, image);
-        });
-
-        return householdReports.map((report) => {
-            const reportDate = new Date(report.reportedAt).toDateString();
-            return {
-                ...report,
-                image: imageByDate.get(reportDate) ?? null,
-                reportDate,
-            };
-        });
-    }, [household, householdReports]);
-
     if (!household) {
         return (
             <div className="p-4 rounded-2xl border border-dashed border-gray-200 bg-white h-full flex items-center justify-center text-gray-500">
@@ -52,11 +34,12 @@ export function HouseholdDetailsPanel({ household, reports }: HouseholdDetailsPa
     const pctOrganic = Math.round((latest.organicKg / latest.totalWasteKg) * 100);
 
     return (
-        <div className="space-y-6 h-[82vh] max-h-[82vh] overflow-y-auto p-4 bg-slate-50 rounded-2xl shadow-inner">
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
-                <Card className="p-4 shadow-lg border border-slate-200 bg-white">
-                    <CardHeader>
-                        <CardTitle>Thông tin hộ dân</CardTitle>
+        <div className="min-h-[70vh] overflow-y-auto p-4 bg-slate-50 text-slate-800">
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-2 mb-3">
+                <Card className="p-3 shadow-lg border border-slate-200 bg-white rounded-xl">
+                    <CardHeader className="flex items-center gap-2 mb-1">
+                        <User className="w-4 h-4 text-emerald-600" />
+                        <CardTitle className="text-base font-semibold">Thông tin hộ dân</CardTitle>
                     </CardHeader>
                     <CardContent>
                         <div className="space-y-2 text-sm">
@@ -72,26 +55,27 @@ export function HouseholdDetailsPanel({ household, reports }: HouseholdDetailsPa
                     </CardContent>
                 </Card>
 
-                <Card className="shadow-lg border border-slate-200 bg-white">
-                    <CardHeader>
-                        <CardTitle>Thành viên hộ gia đình</CardTitle>
+                <Card className="shadow-lg border border-slate-200 bg-white rounded-xl">
+                    <CardHeader className="mb-1 flex items-center gap-2">
+                        <Users className="w-4 h-4 text-blue-600" />
+                        <CardTitle className="text-base font-semibold">Thành viên hộ gia đình</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div className="overflow-auto max-h-44">
-                            <table className="w-full text-xs border-collapse">
+                        <div className="overflow-auto max-h-32 pr-2">
+                            <table className="min-w-[480px] w-full text-[11px] border-separate border-spacing-y-1">
                                 <thead>
-                                    <tr className="bg-slate-100 text-slate-700">
-                                        <th className="px-2 py-1 border">Thành viên</th>
-                                        <th className="px-2 py-1 border">Vai trò</th>
-                                        <th className="px-2 py-1 border">Rác/ngày kg</th>
+                                    <tr className="bg-blue-50 text-blue-700 text-[12px] uppercase tracking-widest ">
+                                        <th className="px-3 py-2 text-left">Thành viên</th>
+                                        <th className="px-3 py-2 text-center">Vai trò</th>
+                                        <th className="px-3 py-2 text-right">Rác/ngày kg</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {household.members.map((member) => (
-                                        <tr key={member.name} className="even:bg-white odd:bg-slate-50">
-                                            <td className="px-2 py-1 border">{member.name}</td>
-                                            <td className="px-2 py-1 border">{member.role}</td>
-                                            <td className="px-2 py-1 border text-right">{member.wasteKg.toFixed(1)}</td>
+                                    {household.members.map((member, idx) => (
+                                        <tr key={member.name} className={idx % 2 === 0 ? "bg-white hover:bg-slate-100" : "bg-slate-50 hover:bg-slate-100"}>
+                                            <td className="px-3 py-2">{member.name}</td>
+                                            <td className="px-3 py-2 text-center">{member.role}</td>
+                                            <td className="px-3 py-2 text-right">{member.wasteKg.toFixed(1)}</td>
                                         </tr>
                                     ))}
                                 </tbody>
@@ -101,12 +85,13 @@ export function HouseholdDetailsPanel({ household, reports }: HouseholdDetailsPa
                 </Card>
             </div>
 
-            <Card className="shadow-lg border border-slate-200 bg-white">
-                <CardHeader>
-                    <CardTitle>Biểu đồ đường tổng rác 12 tháng</CardTitle>
+            <Card className="shadow-lg border border-slate-200 bg-white rounded-2xl">
+                <CardHeader className="mb-2 flex items-center gap-2">
+                    <BarChart3 className="w-4 h-4 text-emerald-600" />
+                    <CardTitle className="text-base font-semibold">Biểu đồ đường tổng rác 12 tháng</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <div className="w-full h-80 md:h-88 xl:h-96">
+                    <div className="w-full h-72 md:h-76 xl:h-80">
                         <ResponsiveContainer width="100%" height="100%">
                             <LineChart data={household.wasteHistory}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
@@ -118,7 +103,7 @@ export function HouseholdDetailsPanel({ household, reports }: HouseholdDetailsPa
                                     if (Number.isNaN(val)) return String(value);
                                     return `${val.toLocaleString()} kg`;
                                 }} />
-                                <Legend verticalAlign="top" align="right" height={36} />
+                                <Legend verticalAlign="bottom" align="center" height={36} />
                                 <Line
                                     type="monotone"
                                     dataKey="totalWasteKg"
@@ -134,9 +119,10 @@ export function HouseholdDetailsPanel({ household, reports }: HouseholdDetailsPa
                 </CardContent>
             </Card>
 
-            <Card className="shadow-sm border border-gray-100">
-                <CardHeader>
-                    <CardTitle>Xu hướng rác & ô nhiễm 12 tháng</CardTitle>
+            <Card className="shadow-lg border border-slate-200 bg-white rounded-2xl">
+                <CardHeader className="mb-3 flex items-center gap-2">
+                    <TrendingUp className="w-4 h-4 text-blue-600" />
+                    <CardTitle className="text-base font-semibold">Xu hướng rác & ô nhiễm 12 tháng</CardTitle>
                 </CardHeader>
                 <CardContent>
                     <div className="w-full h-56 md:h-64">
@@ -182,7 +168,7 @@ export function HouseholdDetailsPanel({ household, reports }: HouseholdDetailsPa
                                         );
                                     }}
                                 />
-                                <Legend verticalAlign="top" align="right" height={36} />
+                                <Legend verticalAlign="bottom" align="center" height={36} />
                                 <Line
                                     yAxisId="waste"
                                     type="monotone"
@@ -241,7 +227,7 @@ export function HouseholdDetailsPanel({ household, reports }: HouseholdDetailsPa
                     <CardTitle>Lịch sử ảnh báo cáo</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <div className="space-y-3 max-h-44 overflow-y-auto">
+                    <div className="space-y-2 max-h-[40vh] overflow-y-auto">
                         {household.imageHistory.map((image) => {
                             const relatedReport = householdReports.find((report) => {
                                 const reportDate = new Date(report.reportedAt).toDateString();
