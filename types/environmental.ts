@@ -1,38 +1,39 @@
 export type TimeRange = "day" | "week" | "month"
 
 export interface PollutionData {
-  co2_emission: number
-  methane_emission: number
-  nitrous_oxide: number
-  particulate_matter: number
-  sulfur_dioxide: number
-  nitrogen_dioxide: number
-  carbon_monoxide: number
-  volatile_organic: number
-  ammonia: number
-  lead_emission: number
-  mercury_emission: number
-  cadmium_emission: number
-  benzene_emission: number
-  ozone_depletion: number
-  radioactive_waste: number
+  CO2: number
+  dioxin: number
+  microplastic: number
+  toxic_chemicals: number
+  non_biodegradable: number
+  NOx: number
+  SO2: number
+  CH4: number
+  "PM2.5": number
+  Pb: number
+  Hg: number
+  Cd: number
+  nitrate: number
+  chemical_residue: number
+  styrene: number
 }
 
 export interface ImpactData {
-  air_pollution: number
-  water_pollution: number
-  soil_pollution: number
+  air: number
+  water: number
+  soil: number
 }
 
 export interface ImpactPoint {
   day: number
-  air_pollution: number
-  water_pollution: number
-  soil_pollution: number
+  air: number
+  water: number
+  soil: number
 }
 
 export interface EnvironmentalPayload {
   pollution: PollutionData
   impact: ImpactData
   timeSeries: ImpactPoint[]
+  isMock?: boolean
 }

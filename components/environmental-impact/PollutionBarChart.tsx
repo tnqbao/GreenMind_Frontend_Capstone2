@@ -18,22 +18,22 @@ interface Props {
 }
 
 const LABEL_MAP: Record<string, string> = {
-  co2_emission: "CO₂",
-  methane_emission: "CH₄",
-  nitrous_oxide: "N₂O",
-  particulate_matter: "PM",
-  sulfur_dioxide: "SO₂",
-  nitrogen_dioxide: "NO₂",
-  carbon_monoxide: "CO",
-  volatile_organic: "VOC",
-  ammonia: "NH₃",
-  lead_emission: "Pb",
-  mercury_emission: "Hg",
-  cadmium_emission: "Cd",
-  benzene_emission: "C₆H₆",
-  ozone_depletion: "ODP",
-  radioactive_waste: "RAD",
-  total_pollution: "Total",
+  CO2:               "CO₂",
+  dioxin:            "Dioxin",
+  microplastic:      "Microplastic",
+  toxic_chemicals:   "Toxic Chem.",
+  non_biodegradable: "Non-Biodeg.",
+  NOx:               "NOₓ",
+  SO2:               "SO₂",
+  CH4:               "CH₄",
+  "PM2.5":           "PM2.5",
+  Pb:                "Pb",
+  Hg:                "Hg",
+  Cd:                "Cd",
+  nitrate:           "Nitrate",
+  chemical_residue:  "Chem. Residue",
+  styrene:           "Styrene",
+  total_pollution:   "Total",
 }
 
 const BAR_COLORS: Record<string, string> = {
@@ -56,7 +56,7 @@ function buildChartData(pollutionData: PollutionData, selectedPollutants: string
     value,
   }))
 
-  bars.push({ key: "total_pollution", label: "Total", value: total })
+  bars.push({ key: "total_pollution", label: "Total", value: parseFloat(total.toFixed(4)) })
   return bars
 }
 

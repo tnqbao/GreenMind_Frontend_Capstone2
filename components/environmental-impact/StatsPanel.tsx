@@ -25,19 +25,19 @@ interface Props {
 }
 
 function computeTotalPollution(pollution: PollutionData): number {
-  return Object.values(pollution).reduce((acc, v) => acc + v, 0)
+  return parseFloat(Object.values(pollution).reduce((acc, v) => acc + v, 0).toFixed(4))
 }
 
 export function StatsPanel({ pollution, impact }: Props) {
   const totalPollution = computeTotalPollution(pollution)
-  const totalCo2 = pollution.co2_emission
+  const totalCo2 = pollution.CO2
 
   const stats: StatCardProps[] = [
-    { id: "stat-co2",    label: "Total CO₂",     value: totalCo2,              accent: "text-emerald-400" },
-    { id: "stat-total",  label: "Total Pollution", value: totalPollution,        accent: "text-indigo-400"  },
-    { id: "stat-air",    label: "Air Impact",     value: impact.air_pollution,  accent: "text-gray-300"    },
-    { id: "stat-water",  label: "Water Impact",   value: impact.water_pollution, accent: "text-orange-400" },
-    { id: "stat-soil",   label: "Soil Impact",    value: impact.soil_pollution, accent: "text-red-400"     },
+    { id: "stat-co2",    label: "Total CO₂",      value: totalCo2,       accent: "text-emerald-400" },
+    { id: "stat-total",  label: "Total Pollution", value: totalPollution, accent: "text-indigo-400"  },
+    { id: "stat-air",    label: "Air Impact",      value: impact.air,     accent: "text-gray-300"    },
+    { id: "stat-water",  label: "Water Impact",    value: impact.water,   accent: "text-orange-400"  },
+    { id: "stat-soil",   label: "Soil Impact",     value: impact.soil,    accent: "text-red-400"     },
   ]
 
   return (

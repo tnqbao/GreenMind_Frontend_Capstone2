@@ -9,18 +9,27 @@ const TIME_OPTIONS: { label: string; value: TimeRange }[] = [
 ]
 
 const ALL_POLLUTANTS = [
-  "co2_emission", "methane_emission", "nitrous_oxide", "particulate_matter",
-  "sulfur_dioxide", "nitrogen_dioxide", "carbon_monoxide", "volatile_organic",
-  "ammonia", "lead_emission", "mercury_emission", "cadmium_emission",
-  "benzene_emission", "ozone_depletion", "radioactive_waste",
+  "CO2", "dioxin", "microplastic", "toxic_chemicals", "non_biodegradable",
+  "NOx", "SO2", "CH4", "PM2.5", "Pb", "Hg", "Cd",
+  "nitrate", "chemical_residue", "styrene",
 ]
 
 const POLLUTANT_LABELS: Record<string, string> = {
-  co2_emission: "CO₂", methane_emission: "CH₄", nitrous_oxide: "N₂O",
-  particulate_matter: "PM", sulfur_dioxide: "SO₂", nitrogen_dioxide: "NO₂",
-  carbon_monoxide: "CO", volatile_organic: "VOC", ammonia: "NH₃",
-  lead_emission: "Pb", mercury_emission: "Hg", cadmium_emission: "Cd",
-  benzene_emission: "C₆H₆", ozone_depletion: "ODP", radioactive_waste: "RAD",
+  CO2:               "CO₂",
+  dioxin:            "Dioxin",
+  microplastic:      "Microplastic",
+  toxic_chemicals:   "Toxic Chem.",
+  non_biodegradable: "Non-Biodeg.",
+  NOx:               "NOₓ",
+  SO2:               "SO₂",
+  CH4:               "CH₄",
+  "PM2.5":           "PM2.5",
+  Pb:                "Pb",
+  Hg:                "Hg",
+  Cd:                "Cd",
+  nitrate:           "Nitrate",
+  chemical_residue:  "Chem. Residue",
+  styrene:           "Styrene",
 }
 
 interface Props {
@@ -44,28 +53,6 @@ export function DashboardFilters({
 }: Props) {
   return (
     <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-8">
-      {/* Time range */}
-      <div className="flex flex-col gap-2">
-        <span className="text-xs font-medium tracking-widest text-gray-500 uppercase">Time Range</span>
-        <div className="flex gap-1 rounded-lg bg-muted p-1">
-          {TIME_OPTIONS.map((opt) => (
-            <button
-              key={opt.value}
-              id={`time-filter-${opt.value}`}
-              onClick={() => onTimeRangeChange(opt.value)}
-              className={[
-                "rounded-md px-4 py-1.5 text-sm font-medium transition-colors",
-                timeRange === opt.value
-                  ? "bg-primary text-primary-foreground shadow"
-                  : "text-muted-foreground hover:text-foreground",
-              ].join(" ")}
-            >
-              {opt.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
       {/* Pollutant multi-select */}
       <div className="flex flex-col gap-2">
         <span className="text-xs font-medium tracking-widest text-gray-500 uppercase">Pollutants</span>
@@ -88,6 +75,28 @@ export function DashboardFilters({
               </button>
             )
           })}
+        </div>
+      </div>
+
+      {/* Time range */}
+      <div className="flex flex-col gap-2">
+        <span className="text-xs font-medium tracking-widest text-gray-500 uppercase">Time Range</span>
+        <div className="flex gap-1 rounded-lg bg-muted p-1">
+          {TIME_OPTIONS.map((opt) => (
+            <button
+              key={opt.value}
+              id={`time-filter-${opt.value}`}
+              onClick={() => onTimeRangeChange(opt.value)}
+              className={[
+                "rounded-md px-4 py-1.5 text-sm font-medium transition-colors",
+                timeRange === opt.value
+                  ? "bg-primary text-primary-foreground shadow"
+                  : "text-muted-foreground hover:text-foreground",
+              ].join(" ")}
+            >
+              {opt.label}
+            </button>
+          ))}
         </div>
       </div>
     </div>

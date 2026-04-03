@@ -17,9 +17,9 @@ interface Props {
 }
 
 const SERIES = [
-  { key: "air_pollution",   label: "Air",   color: "#111827", fillOpacity: 0.15 },
-  { key: "soil_pollution",  label: "Soil",  color: "#ef4444", fillOpacity: 0.2  },
-  { key: "water_pollution", label: "Water", color: "#f97316", fillOpacity: 0.2  },
+  { key: "air",   label: "Air",   color: "#6366f1", fillOpacity: 0.15 },
+  { key: "soil",  label: "Soil",  color: "#ef4444", fillOpacity: 0.2  },
+  { key: "water", label: "Water", color: "#f97316", fillOpacity: 0.2  },
 ] as const
 
 export function ImpactAreaChart({ timeSeries }: Props) {
