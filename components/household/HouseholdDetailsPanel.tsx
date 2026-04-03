@@ -35,8 +35,8 @@ export function HouseholdDetailsPanel({ household, reports }: HouseholdDetailsPa
 
     return (
         <div className="min-h-[70vh] overflow-y-auto p-4 bg-slate-50 text-slate-800">
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-2 mb-3">
-                <Card className="p-3 shadow-lg border border-slate-200 bg-white rounded-xl">
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-2 mb-3 min-h-[260px]">
+                <Card className="p-3 shadow-lg border border-slate-200 bg-white rounded-xl min-h-[220px]">
                     <CardHeader className="flex items-center gap-2 mb-1">
                         <User className="w-4 h-4 text-emerald-600" />
                         <CardTitle className="text-base font-semibold">Thông tin hộ dân</CardTitle>
@@ -48,26 +48,27 @@ export function HouseholdDetailsPanel({ household, reports }: HouseholdDetailsPa
                             <p>Phường ID: {household.wardId}</p>
                             <p>Quy mô hộ: {household.familySize} người</p>
                             <p>Trạng thái: <span className={household.status === "red" ? "text-red-600" : household.status === "yellow" ? "text-amber-600" : "text-emerald-600"}>{household.status.toUpperCase()}</span></p>
-                            <p>Tổng rác hiện tại: {household.waste.toFixed(1)} kg/ngày - {household.reportCount} báo cáo</p>
+                            <p>Tổng lượt detect: {household.reportCount} lần</p>
+                            <p>Tổng lượt upload ảnh: {household.imageHistory?.length ?? 0} lần</p>
                             <p>Rác tháng gần nhất: {latest.totalWasteKg.toLocaleString()} kg</p>
                             <p>Phân loại: {pctPlastic}% nhựa | {pctOrganic}% hữu cơ | {100 - pctPlastic - pctOrganic}% hỗn hợp/khác</p>
                         </div>
                     </CardContent>
                 </Card>
 
-                <Card className="shadow-lg border border-slate-200 bg-white rounded-xl">
+                <Card className="shadow-lg border border-slate-200 bg-white rounded-xl min-h-[320px]">
                     <CardHeader className="mb-1 flex items-center gap-2">
                         <Users className="w-4 h-4 text-blue-600" />
                         <CardTitle className="text-base font-semibold">Thành viên hộ gia đình</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div className="overflow-auto max-h-32 pr-2">
-                            <table className="min-w-[480px] w-full text-[11px] border-separate border-spacing-y-1">
+                        <div className="overflow-auto max-h-[400px] min-h-[220px] pr-2">
+                            <table className="min-w-[500px] w-full text-[11px] border-separate border-spacing-y-1">
                                 <thead>
                                     <tr className="bg-blue-50 text-blue-700 text-[12px] uppercase tracking-widest ">
                                         <th className="px-3 py-2 text-left">Thành viên</th>
                                         <th className="px-3 py-2 text-center">Vai trò</th>
-                                        <th className="px-3 py-2 text-right">Rác/ngày kg</th>
+                                        <th className="px-3 py-2 text-right">Tổng số lần chụp rác</th>
                                     </tr>
                                 </thead>
                                 <tbody>

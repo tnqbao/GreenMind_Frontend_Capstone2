@@ -58,20 +58,20 @@ export function HouseholdManagementMap({ households, selectedHouseholdId, onHous
 
             const marker = L.circleMarker([household.lat, household.lng], {
                 radius: household.id === selectedHouseholdId ? 10 : 7,
-                color: color,
+                color,
                 fillColor: color,
                 fillOpacity: household.id === selectedHouseholdId ? 1 : 0.75,
                 weight: household.id === selectedHouseholdId ? 3 : 1.5,
             }).addTo(markerLayerRef.current!);
 
             marker.bindTooltip(`
-        <div style="font-family:system-ui;font-size:12px;min-width:170px;line-height:1.4;">
-          <strong>${household.name}</strong><br/>
-          ${household.address}<br/>
-          <strong>Rác:</strong> ${household.waste.toFixed(1)} kg/ngày<br/>
-          <span style="font-size:11px;color:#4b5563">Báo cáo: ${household.reportCount}</span>
-        </div>
-      `, { direction: "top", offset: [0, -8], className: "monitoring-leaflet-tooltip" });
+                <div style="font-family: system-ui; font-size: 12px; min-width: 170px; line-height: 1.4;">
+                    <strong>${household.name}</strong><br/>
+                    ${household.address}<br/>
+                    <strong>Detect:</strong> ${household.reportCount} lần<br/>
+                    <strong>Ảnh up:</strong> ${household.imageHistory?.length ?? 0} lần
+                </div>
+            `, { direction: "top", offset: [0, -8], className: "monitoring-leaflet-tooltip" });
 
             marker.on("click", () => onHouseholdSelect(household));
 
@@ -108,17 +108,19 @@ export function HouseholdManagementMap({ households, selectedHouseholdId, onHous
             )}
 
             <style>{`
-        .monitoring-leaflet-tooltip {
-          background: white !important;
-          border: 1px solid #e5e7eb !important;
-          border-radius: 10px !important;
-          box-shadow: 0 2px 10px rgba(0,0,0,0.15) !important;
-          padding: 6px 9px !important;
-          font-weight: 500 !important;
-          color:#1f2937;
-        }
-        .monitoring-leaflet-tooltip::before { display: none !important; }
-      `}</style>
+                .monitoring-leaflet-tooltip {
+                    background: white !important;
+                    border: 1px solid #e5e7eb !important;
+                    border-radius: 10px !important;
+                    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15) !important;
+                    padding: 6px 9px !important;
+                    font-weight: 500 !important;
+                    color: #1f2937;
+                }
+                .monitoring-leaflet-tooltip::before {
+                    display: none !important;
+                }
+            `}</style>
         </div>
     );
 }
