@@ -1,156 +1,203 @@
-import { HOUSEHOLDS } from "@/data/wardData";
-import type { Household, HouseholdProfile, HouseholdWasteHistory, HouseholdImageHistory, PollutionMetrics } from "@/types/monitoring";
+import { apiGet } from "@/lib/auth";
+import type { AreaStatus, Household, HouseholdMember, HouseholdProfile } from "@/types/monitoring";
+import type { AxiosRequestConfig } from "axios";
 
-const BASE_MONTHS = [
-    "2025-04", "2025-05", "2025-06", "2025-07", "2025-08", "2025-09", "2025-10", "2025-11", "2025-12", "2026-01", "2026-02", "2026-03",
-];
+const HOUSEHOLDS_API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://vodang-api.gauas.com";
 
-function makeRandomFromSeed(seed: number) {
-    let value = (seed % 1000) / 1000;
-    return () => {
-        value = (value * 9301 + 49297) % 233280;
-        return value / 233280;
-    };
+// API payload types from /households/get-all-households
+export interface ApiHouseholdMember {
+    id: string;
+    username: string;
+    email: string;
+    phoneNumber: string | null;
+    fullName: string;
+    gender: string;
+    location: string;
+    region: string;
+    role: string;
+    roleId: string | null;
+    householdId: string;
+    dateOfBirth: string;
+    segmentId: string | null;
+    createdAt: string;
+    updatedAt: string;
 }
 
-function buildPollution(random: () => number): PollutionMetrics {
-    const ln2 = Math.log(2); // 0.693147...
-    const mod = (n: number) => Math.round(n * 1_000_000) / 1_000_000;
+export interface ApiHousehold {
+    id: string;
+    address: string;
+    urbanAreaId: string | number | null;
+    lat?: string | number | null;
+    lng?: string | number | null;
+    latitude?: string | number | null;
+    longitude?: string | number | null;
+    createdAt: string;
+    updatedAt: string;
+    members?: ApiHouseholdMember[];
+}
 
-    const co2 = mod(ln2 * (0.85 + random() * 0.35));
-    const dioxin = mod((0.45 + random() * 0.25));
-    const microplastic = mod(ln2 * (0.75 + random() * 0.5));
-    const nonBiodegradable = mod(ln2 * (0.75 + random() * 0.5));
+export type ApiGetAllHouseholdsResponse = ApiHousehold[] | { data: ApiHousehold[] };
+
+type ApiHouseholdListEnvelope = {
+    data?: ApiHousehold[] | { data?: ApiHousehold[] };
+    total?: number;
+    page?: number;
+    limit?: number;
+};
+
+function toFiniteNumber(value: unknown): number | null {
+    if (typeof value === "number") {
+        return Number.isFinite(value) ? value : null;
+    }
+
+    if (typeof value === "string") {
+        const normalized = value.trim();
+        if (!normalized) return null;
+        const parsed = Number(normalized);
+        return Number.isFinite(parsed) ? parsed : null;
+    }
+
+    return null;
+}
+
+function extractLatLng(apiHousehold: ApiHousehold): { lat: number; lng: number } {
+    const lat = toFiniteNumber(apiHousehold.lat ?? apiHousehold.latitude) ?? 0;
+    const lng = toFiniteNumber(apiHousehold.lng ?? apiHousehold.longitude) ?? 0;
+    return { lat, lng };
+}
+
+function hashStringToNumber(value: string): number {
+    let hash = 0;
+    for (let i = 0; i < value.length; i += 1) {
+        hash = (hash * 31 + value.charCodeAt(i)) & 0x7fffffff;
+    }
+    return Math.abs(hash) || 1;
+}
+
+function mapApiHouseholdToProfile(apiHousehold: ApiHousehold): HouseholdProfile {
+    const numericId = hashStringToNumber(apiHousehold.id);
+    const members: HouseholdMember[] = (apiHousehold.members ?? []).map((m) => ({
+        name: m.fullName || m.username || "Thành viên",
+        wasteKg: 0,
+        role: m.role || "user",
+    }));
+
+    const { lat, lng } = extractLatLng(apiHousehold);
+
+    const familySize = Math.max(1, members.length);
+    const waste = 0;
+    const reportCount = members.length;
+    const status: AreaStatus = reportCount >= 3 ? "red" : reportCount >= 2 ? "yellow" : "green";
+
+    const mappedHousehold: Household = {
+        id: numericId,
+        wardId: typeof apiHousehold.urbanAreaId === "number" ? apiHousehold.urbanAreaId : 0,
+        name: apiHousehold.address || "Hộ gia đình",
+        address: apiHousehold.address || "Chưa rõ",
+        lat,
+        lng,
+        waste,
+        status,
+        reportCount,
+    };
 
     return {
-        Cd: 0,
-        Hg: 0,
-        Pb: 0,
-        CH4: 0,
-        CO2: co2,
-        NOx: 0,
-        SO2: 0,
-        "PM2.5": 0,
-        dioxin,
-        nitrate: 0,
-        styrene: 0,
-        microplastic,
-        toxic_chemicals: 0,
-        chemical_residue: 0,
-        non_biodegradable: nonBiodegradable,
+        ...mappedHousehold,
+        familySize,
+        members,
+        wasteHistory: [],
+        imageHistory: [],
     };
 }
 
-function buildWasteHistory(household: Household): HouseholdWasteHistory[] {
-    const monthFactor = household.waste * 30;
-    const random = makeRandomFromSeed(household.id);
+export function getHouseholdProfilesFromApi(apiHouseholds: ApiHousehold[]): HouseholdProfile[] {
+    return apiHouseholds.map(mapApiHouseholdToProfile);
+}
 
-    return BASE_MONTHS.map((month) => {
-        const delta = (random() - 0.5) * 0.5; // +/-25%
-        const totalWasteKg = Math.max(20, Math.round((monthFactor * (1 + delta)) * 10) / 10);
-
-        const plasticRatio = 0.3 + (random() * 0.25);
-        const organicRatio = 0.35 + (random() * 0.2);
-        const mixedRatio = 0.2 + (random() * 0.15);
-        const hazardousRatio = Math.max(0, 1 - (plasticRatio + organicRatio + mixedRatio));
-
-        const pollution = buildPollution(random);
-
-        return {
-            month,
-            totalWasteKg,
-            plasticKg: Math.round(totalWasteKg * plasticRatio),
-            organicKg: Math.round(totalWasteKg * organicRatio),
-            mixedKg: Math.round(totalWasteKg * mixedRatio),
-            hazardousKg: Math.round(totalWasteKg * hazardousRatio),
-            pollution,
-            pollutionCO2: pollution.CO2,
-            pollutionDioxin: pollution.dioxin,
-            pollutionMicroplastic: pollution.microplastic,
-            pollutionNonBiodegradable: pollution.non_biodegradable,
-        };
+export async function getAllHouseholds(config?: AxiosRequestConfig): Promise<ApiGetAllHouseholdsResponse | ApiHouseholdListEnvelope> {
+    return apiGet("/households/get-all-households", {
+        baseURL: HOUSEHOLDS_API_BASE_URL,
+        ...config,
     });
 }
 
-function buildImageHistory(household: Household): HouseholdImageHistory[] {
-    const baseUrl = "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267";
+function resolveHouseholdPayload(response: ApiGetAllHouseholdsResponse | ApiHouseholdListEnvelope): {
+    items: ApiHousehold[];
+    total?: number;
+    page?: number;
+    limit?: number;
+} {
+    if (Array.isArray(response)) {
+        return { items: response };
+    }
 
-    return [
-        {
-            id: household.id * 10 + 1,
-            uploadedAt: "2026-03-01 09:15",
-            imageUrl: `${baseUrl}?auto=format&fit=crop&w=800&q=80`,
-            label: "Ảnh rác thải ngày 1",
-            caption: "Rác thải trái cây, túi nylon",
-            items: [
-                { name: "Plastic film", quantity: 9, area: 147757 },
-                { name: "Single-use carrier bag", quantity: 2, area: 18706 },
-            ],
-            total_objects: 11,
-            pollution: {
-                CO2: 0.6931471805569416,
-                microplastic: 0.6931471805569416,
-                dioxin: 0.5365526341607301,
-                non_biodegradable: 0.6931471805569416,
-                CH4: 0,
-                "PM2.5": 0,
-                NOx: 0,
-                SO2: 0,
-                Pb: 0,
-                Hg: 0,
-                Cd: 0,
-                nitrate: 0,
-                chemical_residue: 0,
-                toxic_chemicals: 0,
-                styrene: 0,
-            },
-        },
-        {
-            id: household.id * 10 + 2,
-            uploadedAt: "2026-03-10 14:20",
-            imageUrl: `${baseUrl}?auto=format&fit=crop&w=800&q=70`,
-            label: "Ảnh rác thải ngày 10",
-            caption: "Rác thải vỏ chai nước, giấy"
-        },
-        {
-            id: household.id * 10 + 3,
-            uploadedAt: "2026-03-20 18:05",
-            imageUrl: `${baseUrl}?auto=format&fit=crop&w=800&q=60`,
-            label: "Ảnh rác thải ngày 20",
-            caption: "Rác thải general"
-        },
-    ];
+    const envelope = response as ApiHouseholdListEnvelope;
+    const direct = (response as { data?: unknown })?.data;
+    if (Array.isArray(direct)) {
+        return { items: direct, total: envelope.total, page: envelope.page, limit: envelope.limit };
+    }
+
+    if (direct && typeof direct === "object" && Array.isArray((direct as any).data)) {
+        return { items: (direct as any).data, total: envelope.total, page: envelope.page, limit: envelope.limit };
+    }
+
+    return { items: [], total: envelope.total, page: envelope.page, limit: envelope.limit };
 }
 
-function buildHouseholdMembers(household: Household, familySize: number) {
-    const names = ["Anh", "Bình", "Châu", "Dũng", "Hạ", "Hùng", "Lan", "Linh", "Mai", "Phúc", "Quỳnh", "Thu", "Tiến", "Trang", "Vân"];
-    return Array.from({ length: familySize }, (_, idx) => {
-        const name = names[(household.id + idx) % names.length];
-        const wasteKg = Math.max(0.5, Math.round((household.waste / familySize + (Math.random() - 0.5) * 0.5) * 10) / 10);
-        return {
-            name: `${name} ${idx + 1}`,
-            wasteKg,
-            role: idx === 0 ? "Chủ hộ" : "Thành viên",
+export async function getAllHouseholdProfiles(): Promise<HouseholdProfile[]> {
+    const PREFERRED_LIMIT = 5000;
+    const MAX_PAGES = 200;
+
+    const fetchAllPaged = async (limit: number): Promise<ApiHousehold[]> => {
+        const seen = new Set<string>();
+        const merged: ApiHousehold[] = [];
+
+        const addUnique = (items: ApiHousehold[]) => {
+            for (const item of items) {
+                if (!item?.id) continue;
+                if (seen.has(item.id)) continue;
+                seen.add(item.id);
+                merged.push(item);
+            }
         };
-    });
-}
 
-export function getHouseholdProfiles(source?: Household[]): HouseholdProfile[] {
-    const input = source ?? HOUSEHOLDS;
+        let total: number | undefined;
+        let effectiveLimit = limit;
 
-    return input.map((household) => {
-        const familySize = 3 + (household.id % 4);
-        return {
-            ...household,
-            familySize,
-            members: buildHouseholdMembers(household, familySize),
-            wasteHistory: buildWasteHistory(household),
-            imageHistory: buildImageHistory(household),
-        };
-    });
-}
+        for (let page = 1; page <= MAX_PAGES; page += 1) {
+            const resp = await getAllHouseholds({ params: { page, limit: effectiveLimit } });
+            const payload = resolveHouseholdPayload(resp);
+            if (typeof payload.limit === "number" && payload.limit > 0) {
+                effectiveLimit = payload.limit;
+            }
+            if (typeof payload.total === "number") {
+                total = payload.total;
+            }
 
-export function findHouseholdProfileById(id: number, source?: HouseholdProfile[]): HouseholdProfile | undefined {
-    const list = source ?? getHouseholdProfiles();
-    return list.find((c) => c.id === id);
+            const before = merged.length;
+            addUnique(payload.items);
+
+            if (!payload.items.length) break;
+            if (merged.length === before) break; // page ignored / no new data
+
+            if (typeof total === "number" && merged.length >= total) break;
+            if (payload.items.length < effectiveLimit) break; // last page
+        }
+
+        return merged;
+    };
+
+    // Best effort: try paged fetch with large limit first.
+    try {
+        const merged = await fetchAllPaged(PREFERRED_LIMIT);
+        if (merged.length) return getHouseholdProfilesFromApi(merged);
+    } catch {
+        // ignore and fallback
+    }
+
+    // Fallback: call without params (some endpoints truly return all without pagination).
+    const fallback = resolveHouseholdPayload(await getAllHouseholds());
+    if (fallback.items.length) return getHouseholdProfilesFromApi(fallback.items);
+
+    return [];
 }

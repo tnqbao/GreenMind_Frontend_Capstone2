@@ -1,10 +1,8 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useMemo, useState } from "react";
-import { HOUSEHOLDS } from "@/data/wardData";
-import { WASTE_REPORTS } from "@/data/reportData";
-import { getHouseholdProfiles } from "@/lib/household";
+import { useMemo, useEffect, useState } from "react";
+import { getAllHouseholdProfiles } from "@/lib/household";
 import { HouseholdDetailsPanel } from "@/components/household/HouseholdDetailsPanel";
 import { Dialog, DialogContent, DialogTitle, DialogDescription, DialogClose } from "@/components/ui/dialog";
 import type { HouseholdProfile } from "@/types/monitoring";
@@ -15,9 +13,42 @@ const HouseholdManagementMap = dynamic(
 );
 
 export default function HouseholdManagementPage() {
-    const allHouseholds = useMemo<HouseholdProfile[]>(() => getHouseholdProfiles(HOUSEHOLDS), []);
+    const [allHouseholds, setAllHouseholds] = useState<HouseholdProfile[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [apiError, setApiError] = useState<string | null>(null);
     const [selectedHousehold, setSelectedHousehold] = useState<HouseholdProfile | null>(null);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+    useEffect(() => {
+        let cancelled = false;
+
+        const fetchHouseholds = async () => {
+            setIsLoading(true);
+            setApiError(null);
+
+            try {
+                const profiles = await getAllHouseholdProfiles();
+
+                if (!cancelled) {
+                    setAllHouseholds(profiles);
+                }
+            } catch (error: any) {
+                if (!cancelled) {
+                    setApiError(error?.message ?? 'Lỗi không xác định');
+                }
+            } finally {
+                if (!cancelled) {
+                    setIsLoading(false);
+                }
+            }
+        };
+
+        fetchHouseholds();
+
+        return () => {
+            cancelled = true;
+        };
+    }, []);
 
     const summary = useMemo(() => {
         const totalWastePerDay = allHouseholds.reduce((acc, hh) => acc + hh.waste, 0);
@@ -39,15 +70,21 @@ export default function HouseholdManagementPage() {
                         <p className="text-sm text-slate-500 mt-1">Bản đồ vị trí hộ dân, thống kê rác hàng tháng, lịch sử hình ảnh.</p>
                     </div>
                     <div className="text-sm text-slate-600 space-y-2 rounded-xl bg-white p-3 shadow-sm border border-gray-200">
-                        <p>Hộ dân: <strong>{allHouseholds.length}</strong></p>
-                        <p>Ngày: <strong>{new Date().toLocaleDateString("vi-VN")}</strong></p>
-                        <p>Tổng số lần chụp rác: <strong>{summary.totalReports}</strong></p>
-                        <p>Tổng lần upload ảnh: <strong>{summary.totalImageUploads}</strong></p>
-                        <p>Trạng thái:
-                            <span className="ml-2 px-2 py-1 rounded-md bg-red-100 text-red-700">{summary.red}</span>
-                            <span className="ml-2 px-2 py-1 rounded-md bg-amber-100 text-amber-700">{summary.yellow}</span>
-                            <span className="ml-2 px-2 py-1 rounded-md bg-emerald-100 text-emerald-700">{summary.green}</span>
-                        </p>
+                        {isLoading && <p>Đang tải dữ liệu hộ gia đình...</p>}
+                        {apiError && <p className="text-red-600">Lỗi API: {apiError}</p>}
+                        {!isLoading && !apiError && (
+                            <>
+                                <p>Hộ dân: <strong>{allHouseholds.length}</strong></p>
+                                <p>Ngày: <strong>{new Date().toLocaleDateString("vi-VN")}</strong></p>
+                                <p>Tổng số lần chụp rác: <strong>{summary.totalReports}</strong></p>
+                                <p>Tổng lần upload ảnh: <strong>{summary.totalImageUploads}</strong></p>
+                                <p>Trạng thái:
+                                    <span className="ml-2 px-2 py-1 rounded-md bg-red-100 text-red-700">{summary.red}</span>
+                                    <span className="ml-2 px-2 py-1 rounded-md bg-amber-100 text-amber-700">{summary.yellow}</span>
+                                    <span className="ml-2 px-2 py-1 rounded-md bg-emerald-100 text-emerald-700">{summary.green}</span>
+                                </p>
+                            </>
+                        )}
                     </div>
                 </div>
             </div>
@@ -62,7 +99,7 @@ export default function HouseholdManagementPage() {
                                 setSelectedHousehold(household);
                                 setIsDialogOpen(true);
                             }}
-                            loading={false}
+                            loading={isLoading}
                         />
                     </div>
 
@@ -73,7 +110,7 @@ export default function HouseholdManagementPage() {
                                 Xem thông tin toàn diện, thành viên, rác thải, ảnh và báo cáo.
                             </DialogDescription>
                             {selectedHousehold && (
-                                <HouseholdDetailsPanel household={selectedHousehold} reports={WASTE_REPORTS} />
+                                <HouseholdDetailsPanel household={selectedHousehold} />
                             )}
                             <DialogClose asChild>
                                 <button className="mt-4 rounded-md bg-slate-200 px-3 py-2 text-sm font-semibold">Đóng</button>

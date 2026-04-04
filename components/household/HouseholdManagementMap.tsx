@@ -17,10 +17,52 @@ const STATUS_COLOR: Record<string, string> = {
     green: "#10b981",
 };
 
+const DEFAULT_MAP_CENTER: [number, number] = [16.065, 108.225];
+
+function isValidLatLng(lat: number, lng: number): boolean {
+    return (
+        Number.isFinite(lat) &&
+        Number.isFinite(lng) &&
+        Math.abs(lat) <= 90 &&
+        Math.abs(lng) <= 180 &&
+        !(lat === 0 && lng === 0)
+    );
+}
+
+function jitterAroundCenter(seed: number): { lat: number; lng: number } {
+
+    const baseLat = DEFAULT_MAP_CENTER[0];
+    const baseLng = DEFAULT_MAP_CENTER[1];
+
+    const a = (seed % 360) * (Math.PI / 180);
+    const r = 0.002 + ((seed % 97) / 97) * 0.01;
+
+    return {
+        lat: baseLat + Math.sin(a) * r,
+        lng: baseLng + Math.cos(a) * r,
+    };
+}
+
+function spreadOffset(index: number): { dLat: number; dLng: number } {
+    if (index <= 0) return { dLat: 0, dLng: 0 };
+
+    // Golden-angle spiral to avoid overlap. Step ~35–200m depending on index.
+    const goldenAngle = 137.5 * (Math.PI / 180);
+    const angle = index * goldenAngle;
+    const radius = 0.00035 * Math.sqrt(index); // degrees
+
+    return {
+        dLat: Math.sin(angle) * radius,
+        dLng: Math.cos(angle) * radius,
+    };
+}
+
 export function HouseholdManagementMap({ households, selectedHouseholdId, onHouseholdSelect, loading }: HouseholdManagementMapProps) {
     const mapContainerRef = useRef<HTMLDivElement>(null);
     const mapRef = useRef<L.Map | null>(null);
     const markerLayerRef = useRef<L.LayerGroup | null>(null);
+    const hasFitBoundsRef = useRef(false);
+    const lastFittedCountRef = useRef(0);
 
     useEffect(() => {
         if (!mapContainerRef.current || mapRef.current) return;
@@ -53,13 +95,36 @@ export function HouseholdManagementMap({ households, selectedHouseholdId, onHous
 
         markerLayerRef.current.clearLayers();
 
-        households.forEach((household) => {
-            const color = STATUS_COLOR[household.status] ?? "#6b7280";
+        const boundsAll = L.latLngBounds([]);
+        const boundsReal = L.latLngBounds([]);
+        let hasAnyMarker = false;
+        let hasAnyRealMarker = false;
 
-            const marker = L.circleMarker([household.lat, household.lng], {
+        const indexByKey = new Map<string, number>();
+
+        households.forEach((household) => {
+            const isReal = isValidLatLng(household.lat, household.lng);
+            const basePoint = isReal ? { lat: household.lat, lng: household.lng } : jitterAroundCenter(household.id);
+            const key = `${basePoint.lat.toFixed(5)}:${basePoint.lng.toFixed(5)}`;
+            const idx = indexByKey.get(key) ?? 0;
+            indexByKey.set(key, idx + 1);
+            const offset = spreadOffset(idx);
+            const point = { lat: basePoint.lat + offset.dLat, lng: basePoint.lng + offset.dLng };
+
+            hasAnyMarker = true;
+            boundsAll.extend([point.lat, point.lng]);
+            if (isReal) {
+                hasAnyRealMarker = true;
+                boundsReal.extend([point.lat, point.lng]);
+            }
+
+            const color = STATUS_COLOR[household.status] ?? "#6b7280";
+            const displayColor = isReal ? color : "#64748b";
+
+            const marker = L.circleMarker([point.lat, point.lng], {
                 radius: household.id === selectedHouseholdId ? 10 : 7,
-                color,
-                fillColor: color,
+                color: displayColor,
+                fillColor: displayColor,
                 fillOpacity: household.id === selectedHouseholdId ? 1 : 0.75,
                 weight: household.id === selectedHouseholdId ? 3 : 1.5,
             }).addTo(markerLayerRef.current!);
@@ -68,6 +133,7 @@ export function HouseholdManagementMap({ households, selectedHouseholdId, onHous
                 <div style="font-family: system-ui; font-size: 12px; min-width: 170px; line-height: 1.4;">
                     <strong>${household.name}</strong><br/>
                     ${household.address}<br/>
+                    ${isReal ? "" : "<em style=\"color:#64748b\">Thiếu tọa độ — hiển thị tạm gần trung tâm</em><br/>"}
                     <strong>Detect:</strong> ${household.reportCount} lần<br/>
                     <strong>Ảnh up:</strong> ${household.imageHistory?.length ?? 0} lần
                 </div>
@@ -77,9 +143,19 @@ export function HouseholdManagementMap({ households, selectedHouseholdId, onHous
 
             if (household.id === selectedHouseholdId) {
                 marker.openTooltip();
-                mapRef.current!.flyTo([household.lat, household.lng], 15, { duration: 0.8 });
+                mapRef.current!.flyTo([point.lat, point.lng], 15, { duration: 0.8 });
             }
         });
+
+        if (hasAnyMarker && selectedHouseholdId == null) {
+            // Always prefer fitting to ALL markers so none are off-screen.
+            // Refit when count increases (e.g. when data arrives paged/async).
+            if (!hasFitBoundsRef.current || households.length > lastFittedCountRef.current) {
+                mapRef.current.fitBounds(boundsAll, { padding: [28, 28], maxZoom: 15 });
+                hasFitBoundsRef.current = true;
+                lastFittedCountRef.current = households.length;
+            }
+        }
     }, [households, selectedHouseholdId, onHouseholdSelect]);
 
     return (
