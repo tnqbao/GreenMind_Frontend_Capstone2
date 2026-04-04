@@ -1,10 +1,10 @@
 "use client"
 
-import { LayoutDashboard, BarChart3, Settings, User } from "lucide-react"
+import { LayoutDashboard, BarChart3, Settings, User, MapPin } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
-
+import { Trash2 } from "lucide-react"
 const navItems = [
   {
     title: "Dashboard",
