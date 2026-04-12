@@ -558,7 +558,14 @@ export function MapView({
       if (boundaryLayerRef.current && !mapRef.current?.hasLayer(boundaryLayerRef.current)) {
         mapRef.current?.addLayer(boundaryLayerRef.current);
       }
-      mapRef.current?.flyTo([16.065, 108.220], 10, { duration: 0.6 });
+
+      const validReports = reports.filter(r => r.lat !== 0 && r.lng !== 0);
+      if (validReports.length > 0) {
+        const bounds = L.latLngBounds(validReports.map(r => L.latLng(r.lat, r.lng)));
+        mapRef.current?.flyToBounds(bounds.pad(0.15), { duration: 0.8, maxZoom: 13 });
+      } else {
+        mapRef.current?.flyTo([16.065, 108.220], 10, { duration: 0.6 });
+      }
     } else {
       // ── Level 2: ward detail — ẩn boundary để gọn bản đồ ──
       wardLayerRef.current?.clearLayers();
@@ -615,7 +622,6 @@ export function MapView({
   const warningCount = visibleAlerts.filter((a) => a.level === "warning").length;
   const criticalCount = visibleAlerts.filter((a) => a.level === "critical").length;
   const pendingCount = reports.filter((r) => !selectedWardName || r.wardName === selectedWardName).filter(r => r.status === "pending").length;
-  const assignedCount = reports.filter((r) => !selectedWardName || r.wardName === selectedWardName).filter(r => r.status === "assigned").length;
   const doneCount = reports.filter((r) => !selectedWardName || r.wardName === selectedWardName).filter(r => r.status === "done").length;
 
   return (
@@ -725,7 +731,6 @@ export function MapView({
             </p>
             {[
               { color: "#ef4444", label: `Chờ xử lý (${pendingCount})` },
-              { color: "#3b82f6", label: `Đang thu gom (${assignedCount})` },
               { color: "#10b981", label: `Hoàn thành (${doneCount})` },
             ].map((item) => (
               <div key={item.label} className="flex items-center gap-2">
@@ -741,9 +746,9 @@ export function MapView({
       {popupWardData && (
         <div className="absolute inset-0 z-[2000] bg-white/95 backdrop-blur-md animate-in fade-in duration-200">
           <div className="w-full h-full p-6 flex flex-col">
-            <WardChartPopup 
-              wardName={popupWardData.wardName} 
-              reports={popupWardData.reports} 
+            <WardChartPopup
+              wardName={popupWardData.wardName}
+              reports={popupWardData.reports}
               allReports={popupWardData.allReports}
               onClose={() => setPopupWardData(null)}
             />

@@ -1,251 +1,282 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import dynamic from "next/dynamic";
-import { clusterReports } from "@/lib/clustering";
-import { CampaignModal } from "@/components/campaign/CampaignModal";
-import { CampaignRegion, WasteReport, WasteType, ReportStatus } from "@/types/waste-report";
-import { Card, CardContent } from "@/components/ui/card";
+import { Campaign } from "@/types/campaign";
+import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { AlertCircle, MapPin, Loader2 } from "lucide-react";
+import { Loader2, Users, Calendar, Clock, BarChart3 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { getAccessToken } from "@/lib/auth";
-
-// Dynamically import Map to prevent SSR issues
-const CampaignMap = dynamic(
-  () => import("@/components/campaign/CampaignMap").then((mod) => mod.CampaignMap),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="w-full h-[600px] flex items-center justify-center bg-slate-50 border border-slate-200 rounded-2xl">
-        <Loader2 className="w-8 h-8 animate-spin text-slate-400" />
-      </div>
-    )
-  }
-);
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { CampaignDetailModal } from "@/components/campaign/CampaignDetailModal";
 
 export default function CampaignManagementPage() {
-  const [selectedRegionId, setSelectedRegionId] = useState<string | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [reports, setReports] = useState<WasteReport[]>([]);
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // Modal state
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(null);
+
+  // Chart state
+  const [chartMode, setChartMode] = useState<"day" | "month" | "year">("day");
 
   useEffect(() => {
-    async function fetchReports() {
+    async function fetchCampaigns() {
       setLoading(true);
       try {
         const token = getAccessToken();
-        const res = await fetch("https://vodang-api.gauas.com/waste-monitoring?limit=100", {
+        const res = await fetch("https://vodang-api.gauas.com/campaigns?limit=100", {
           headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-          cache: "no-store"
+          cache: "no-store",
         });
-        
+
         if (res.ok) {
           const apiData = await res.json();
           const rawList: any[] = Array.isArray(apiData) ? apiData : (apiData?.data ?? []);
-          
-          const wasteTypeMap: Record<string, WasteType> = {
-            plastic: "plastic",
-            organic: "organic",
-            hazardous: "hazardous",
-            mixed: "mixed",
-          };
-          const statusMap: Record<string, ReportStatus> = {
-            pending: "pending",
-            assigned: "assigned",
-            done: "done",
-            collected: "done",
-            resolved: "done",
-          };
-
-          const validReports: WasteReport[] = rawList.map((r: any) => ({
-            id: r.id,
-            code: r.code || "",
-            householdId: 0,
-            householdName: r.reportedBy || "Không rõ",
-            wardId: 0,
-            wardName: r.wardName || "Không rõ",
-            lat: r.lat ?? 0,
-            lng: r.lng ?? 0,
-            wasteKg: r.wasteKg || 0,
-            wasteType: wasteTypeMap[r.wasteType] ?? "mixed",
-            description: r.description || "Không có nội dung",
-            status: statusMap[r.status] ?? "pending",
-            reportedAt: r.createdAt || new Date().toISOString(),
-            assignedTo: r.assignedTo || null,
-            collectorId: r.collectorId || null,
-            resolvedAt: r.resolvedAt || null,
-            imageUrl: r.imageUrl || null,
-            imageEvidenceUrl: r.imageEvidenceUrl || null,
-          }));
-          
-          setReports(validReports);
+          setCampaigns(rawList);
         }
       } catch (error) {
-        console.error("Failed to fetch reports:", error);
+        console.error("Failed to fetch campaigns:", error);
       } finally {
         setLoading(false);
       }
     }
-    fetchReports();
+    fetchCampaigns();
   }, []);
 
-  // Cluster reports whenever reports change
-  const regions = useMemo(() => {
-    return clusterReports(reports, 500);
-  }, [reports]);
+  const openCampaignDetail = (id: string) => {
+    setSelectedCampaignId(id);
+    setIsModalOpen(true);
+  };
 
-  // Mock chart data for previous months + current month dynamically
-  const campaignChartData = useMemo(() => [
-    { month: "T10", count: 12 },
-    { month: "T11", count: 15 },
-    { month: "T12", count: 18 },
-    { month: "T01", count: 14 },
-    { month: "T02", count: 20 },
-    { month: "T03", count: 25 },
-    { month: "T04", count: regions.length || 23 },
-  ], [regions.length]);
+  const closeCampaignDetail = () => {
+    setIsModalOpen(false);
+    setTimeout(() => setSelectedCampaignId(null), 300); // clear after animation
+  };
 
-  const selectedRegion = useMemo(() => {
-    return regions.find(r => r.id === selectedRegionId) || null;
-  }, [regions, selectedRegionId]);
+  const renderStatus = (status?: string) => {
+    switch (status?.toLowerCase()) {
+      case "completed":
+        return <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-200 border-none">Đã hoàn thành</Badge>;
+      case "active":
+        return <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-200 border-none">Đang diễn ra</Badge>;
+      default:
+        return <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-200 border-none">Sắp diễn ra</Badge>;
+    }
+  };
+
+  // ─── CHART AGGREGATION ─────────────────────────────────────────
+  const chartData = useMemo(() => {
+    const counts: Record<string, number> = {};
+    
+    if (campaigns.length === 0) return [];
+
+    // Gộp dữ liệu theo Ngày/Tháng/Năm từ startDate
+    campaigns.forEach(c => {
+      if (!c.startDate) return;
+      const d = new Date(c.startDate);
+      let dateStr = "";
+      if (chartMode === "day") {
+         dateStr = `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
+      } else if (chartMode === "month") {
+         dateStr = `${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
+      } else {
+         dateStr = `${d.getFullYear()}`;
+      }
+      counts[dateStr] = (counts[dateStr] || 0) + 1;
+    });
+
+    const entries = Object.entries(counts).map(([date, count]) => ({ date, count }));
+    
+    // Sắp xếp
+    entries.sort((a, b) => {
+      if (chartMode === "day") {
+        const [d1, m1, y1] = a.date.split("/");
+        const [d2, m2, y2] = b.date.split("/");
+        if (y1 !== y2) return parseInt(y1) - parseInt(y2);
+        if (m1 !== m2) return parseInt(m1) - parseInt(m2);
+        return parseInt(d1) - parseInt(d2);
+      } else if (chartMode === "month") {
+        const [m1, y1] = a.date.split("/");
+        const [m2, y2] = b.date.split("/");
+        if (y1 !== y2) return parseInt(y1) - parseInt(y2);
+        return parseInt(m1) - parseInt(m2);
+      } else {
+        return parseInt(a.date) - parseInt(b.date);
+      }
+    });
+
+    return entries;
+  }, [campaigns, chartMode]);
+
+  const ongoingCampaignsCount = campaigns.filter(c => c.status?.toLowerCase() !== "completed").length;
 
   return (
-    <div className="p-6 h-[calc(100vh-64px)] flex flex-col gap-6 overflow-hidden">
+    <div className="p-6 h-[calc(100vh-64px)] flex flex-col gap-6 overflow-hidden bg-slate-50">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shrink-0">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Trash cleanup campaign</h1>
-          <p className="text-slate-500 mt-1 flex items-center gap-1.5">
-            <AlertCircle className="w-4 h-4" />
-            Group trash reports to plan cleanup (500m radius)
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Quản lý Chiến dịch</h1>
+          <p className="text-slate-500 mt-1 flex items-center gap-1.5 text-sm">
+            Theo dõi mật độ tạo chiến dịch và điều phối đợt ra quân tình nguyện.
           </p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 min-h-0 flex-1">
-        {/* Sidebar List */}
-        <Card className="lg:col-span-1 shadow-sm border-slate-200 flex flex-col min-h-0 overflow-hidden">
-          <Tabs defaultValue="list" className="flex flex-col flex-1 min-h-0">
-            <div className="p-4 border-b border-slate-100 bg-slate-50 shrink-0 rounded-t-xl space-y-3">
-              <h2 className="font-semibold text-slate-800 flex items-center gap-2">
-                <MapPin className="w-4 h-4 text-primary" />
-                Khu vực cần xử lý ({regions.length})
-                {loading && <Loader2 className="w-4 h-4 animate-spin text-slate-400 ml-auto" />}
-              </h2>
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="list">Danh sách</TabsTrigger>
-                <TabsTrigger value="stats">Thống kê</TabsTrigger>
-              </TabsList>
-            </div>
-            
-            <TabsContent value="list" className="flex-1 min-h-0 overflow-hidden m-0 data-[state=inactive]:hidden">
-              <ScrollArea className="h-full">
-                <div className="p-3 space-y-3">
-                  {regions.map((region) => (
-                    <div
-                      key={region.id}
-                      onClick={() => setSelectedRegionId(region.id)}
-                      className={`p-4 rounded-xl cursor-pointer transition-all border ${selectedRegionId === region.id
-                        ? "bg-primary/5 border-primary/20 shadow-sm ring-1 ring-primary/20"
-                        : "bg-white border-slate-100 hover:border-slate-300 hover:shadow-sm"
-                        }`}
-                    >
-                      <div className="flex items-start justify-between mb-2">
-                        <h3 className="font-semibold text-slate-800">{region.name}</h3>
-                        <Badge variant="secondary" className="bg-red-50 text-red-600 hover:bg-red-100 border-red-100">
-                          {region.reports.length} báo cáo
-                        </Badge>
-                      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 min-h-0 flex-1">
+        
+        {/* === Cột danh sách chiến dịch === */}
+        <Card className="lg:col-span-5 xl:col-span-4 shadow-sm border-slate-200 flex flex-col min-h-0 overflow-hidden bg-white">
+          <div className="p-4 border-b border-slate-100 bg-slate-50/50 shrink-0 flex items-center justify-between">
+            <h2 className="font-semibold text-slate-800 flex items-center gap-2">
+              <Calendar className="w-4 h-4 text-primary" />
+              Tất cả Chiến dịch
+            </h2>
+            <Badge variant="secondary" className="bg-white border-slate-200 text-slate-700">{campaigns.length}</Badge>
+          </div>
 
-                      <div className="text-xs text-slate-500 mb-4">
-                        Tâm: {region.center.lat.toFixed(4)}, {region.center.lng.toFixed(4)}
-                      </div>
-
-                      {selectedRegionId === region.id && (
-                        <Button
-                          className="w-full text-xs h-8"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setIsModalOpen(true);
-                          }}
-                        >
-                          Tạo chiến dịch
-                        </Button>
-                      )}
+          <ScrollArea className="flex-1 min-h-0 p-3">
+            {loading ? (
+              <div className="flex justify-center items-center h-32">
+                 <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
+              </div>
+            ) : campaigns.length === 0 ? (
+              <div className="text-center py-10 text-slate-400 text-sm">
+                Không có chiến dịch nào được ghi nhận.
+              </div>
+            ) : (
+              <div className="space-y-3 pb-4">
+                {campaigns.map((campaign) => (
+                  <div
+                    key={campaign.id}
+                    onClick={() => openCampaignDetail(campaign.id)}
+                    className="p-4 rounded-xl cursor-pointer transition-all border border-slate-100 bg-white hover:border-blue-300 hover:shadow-md hover:ring-2 ring-blue-50 group"
+                  >
+                    <div className="flex items-start justify-between mb-2.5 gap-2">
+                      <h3 className="font-bold text-slate-800 text-sm leading-snug group-hover:text-blue-700 transition-colors">
+                        {campaign.name}
+                      </h3>
+                      <div className="shrink-0">{renderStatus(campaign.status)}</div>
                     </div>
-                  ))}
-                </div>
-              </ScrollArea>
-            </TabsContent>
-
-            <TabsContent value="stats" className="flex-1 min-h-0 overflow-y-auto m-0 data-[state=inactive]:hidden p-4">
-              <h3 className="text-sm font-semibold text-slate-800 mb-1">Chiến dịch theo tháng</h3>
-              <p className="text-xs text-slate-500 mb-4">Số lượng dự kiến và đã thực hiện</p>
-              
-              <div className="h-[200px] w-full mb-4">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={campaignChartData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                    <XAxis
-                      dataKey="month"
-                      tick={{ fontSize: 11, fill: "#64748b" }}
-                      axisLine={false}
-                      tickLine={false}
-                      dy={10}
-                    />
-                    <YAxis
-                      tick={{ fontSize: 11, fill: "#64748b" }}
-                      axisLine={false}
-                      tickLine={false}
-                      width={30}
-                    />
-                    <Tooltip
-                      cursor={{ fill: '#f8fafc' }}
-                      contentStyle={{
-                        fontSize: 12,
-                        borderRadius: 8,
-                        border: "1px solid #e2e8f0",
-                        boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
-                      }}
-                    />
-                    <Bar
-                      dataKey="count"
-                      name="Chiến dịch"
-                      fill="#10b981"
-                      radius={[4, 4, 0, 0]}
-                      maxBarSize={40}
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
+                    
+                    <div className="text-xs font-medium text-slate-500 flex items-center gap-4">
+                      <span className="flex items-center gap-1.5 bg-slate-50 px-2 py-1 rounded-md">
+                        <Clock className="w-3.5 h-3.5 text-slate-400"/>
+                        {new Date(campaign.startDate).toLocaleDateString("vi-VN")}
+                      </span>
+                      <span className="flex items-center gap-1.5 bg-emerald-50 text-emerald-700 px-2 py-1 rounded-md">
+                        <Users className="w-3.5 h-3.5 text-emerald-500"/>
+                        {campaign.participantsCount ?? campaign.participants?.length ?? 0} tham gia
+                      </span>
+                    </div>
+                  </div>
+                ))}
               </div>
-
-              <div className="bg-emerald-50 rounded-xl p-3 border border-emerald-100">
-                <p className="text-xs text-emerald-800 font-medium leading-relaxed">
-                  Tháng này có <span className="font-bold text-lg">{regions.length}</span> chiến dịch chờ triển khai dựa trên cụm điểm đen rác thải thực tế trên bản đồ.
-                </p>
-              </div>
-            </TabsContent>
-          </Tabs>
+            )}
+          </ScrollArea>
         </Card>
 
-        {/* Map View */}
-        <div className="lg:col-span-3 rounded-2xl overflow-hidden shadow-sm border border-slate-200 relative min-h-[400px]">
-          <CampaignMap
-            regions={regions}
-            selectedRegionId={selectedRegionId}
-            onRegionSelect={(region) => setSelectedRegionId(region ? region.id : null)}
-            radiusInMeters={500}
-          />
+        {/* === Cột Biểu đồ thống kê === */}
+        <div className="lg:col-span-7 xl:col-span-8 flex flex-col gap-6 min-h-0">
+          
+          {/* Top Quick Stats */}
+          <div className="grid grid-cols-2 bg-white gap-4 rounded-xl shadow-sm border border-slate-200 overflow-hidden shrink-0">
+             <div className="p-6 border-r border-slate-100 flex items-center gap-5">
+                <div className="w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center">
+                   <Calendar className="w-6 h-6 text-blue-600" />
+                </div>
+                <div>
+                   <p className="text-sm font-semibold text-slate-500 uppercase tracking-wide">Tổng số Chiến dịch</p>
+                   <p className="text-3xl font-black text-slate-800 mt-1">{campaigns.length}</p>
+                </div>
+             </div>
+             <div className="p-6 flex items-center gap-5">
+                <div className="w-12 h-12 bg-amber-50 rounded-full flex items-center justify-center">
+                   <BarChart3 className="w-6 h-6 text-amber-600" />
+                </div>
+                <div>
+                   <p className="text-sm font-semibold text-slate-500 uppercase tracking-wide">Chờ triển khai / Đang chạy</p>
+                   <p className="text-3xl font-black text-slate-800 mt-1">{ongoingCampaignsCount}</p>
+                </div>
+             </div>
+          </div>
+
+          {/* Chart Panel */}
+          <Card className="flex-1 shadow-sm border-slate-200 flex flex-col overflow-hidden bg-white p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
+              <div>
+                <h2 className="font-bold text-lg text-slate-800 mb-2">
+                  Tần suất tổ chức chiến dịch theo {chartMode === "day" ? "ngày" : chartMode === "month" ? "tháng" : "năm"}
+                </h2>
+                <p className="text-sm text-slate-500">
+                  Thống kê số lượng chiến dịch dọn rác phát sinh qua từng {chartMode === "day" ? "ngày" : chartMode === "month" ? "tháng" : "năm"} dựa trên dữ liệu báo cáo.
+                </p>
+              </div>
+              <div className="flex bg-slate-100 p-1 rounded-lg border border-slate-200 shrink-0">
+                <button 
+                  onClick={() => setChartMode("day")} 
+                  className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${chartMode === "day" ? "bg-white text-slate-800 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
+                >Ngày</button>
+                <button 
+                  onClick={() => setChartMode("month")} 
+                  className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${chartMode === "month" ? "bg-white text-slate-800 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
+                >Tháng</button>
+                <button 
+                  onClick={() => setChartMode("year")} 
+                  className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${chartMode === "year" ? "bg-white text-slate-800 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
+                >Năm</button>
+              </div>
+            </div>
+            
+            <div className="flex-1 w-full min-h-0 relative">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={chartData} margin={{ top: 20, right: 30, left: 0, bottom: 20 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                  <XAxis 
+                    dataKey="date" 
+                    tickLine={false} 
+                    axisLine={false} 
+                    tickMargin={12} 
+                    tick={{ fill: "#64748b", fontSize: 13, fontWeight: 500 }} 
+                  />
+                  <YAxis 
+                    tickLine={false} 
+                    axisLine={false} 
+                    tickMargin={12} 
+                    tick={{ fill: "#64748b", fontSize: 13, fontWeight: 500 }} 
+                    allowDecimals={false}
+                  />
+                  <Tooltip 
+                    cursor={{ fill: "#f1f5f9" }}
+                    contentStyle={{ 
+                      borderRadius: "12px", 
+                      border: "none", 
+                      boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)",
+                      fontWeight: "bold",
+                    }}
+                    labelStyle={{ color: "#64748b", fontSize: "12px", marginBottom: "4px", fontWeight: "normal" }}
+                    formatter={(value: any) => [`${value} chiến dịch`, "Số lượng"]}
+                  />
+                  <Bar 
+                    dataKey="count" 
+                    fill="#3b82f6" 
+                    radius={[6, 6, 0, 0]} 
+                    maxBarSize={60}
+                    label={{ position: "top", fill: "#3b82f6", fontSize: 12, fontWeight: "bold", dy: -8 }}
+                    animationDuration={1500}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </Card>
         </div>
       </div>
 
-      <CampaignModal
+      {/* Modal Popup Chi tiết */}
+      <CampaignDetailModal 
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        region={selectedRegion}
+        onClose={closeCampaignDetail}
+        campaignId={selectedCampaignId}
       />
     </div>
   );
