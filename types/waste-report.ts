@@ -35,38 +35,31 @@ export interface HeatmapPoint {
 // ─── Waste Report (Báo cáo rác từ hộ dân) ──────────────────────────────────
 
 export type WasteType = "plastic" | "organic" | "mixed" | "hazardous";
-export type ReportStatus = "pending" | "assigned" | "done";
+export type ReportStatus = "pending" | "done";
 
 export interface WasteReport {
   id: string;
   code: string;
-  householdId: number;
-  householdName: string;
-  wardId: number;
+  reportedByUserId: string | null;   // UUID của người báo cáo (User)
+  reportedByName: string | null;     // tên hiển thị (resolve từ reportedBy relation)
+  reportedBy?: any;                  // user object/name tuỳ API trả về
   wardName: string;
   lat: number;
   lng: number;
-  wasteKg: number;
   wasteType: WasteType;
-  description: string;
+  description: string | null;
   status: ReportStatus;
-  reportedAt: string;
-  assignedTo: string | null;
-  collectorId: string | null;
+  createdAt: string;                 // ISO string (CreateDateColumn)
   resolvedAt: string | null;
   imageUrl: string | null;           // ảnh báo cáo rác ban đầu
   imageEvidenceUrl: string | null;   // ảnh bằng chứng sau khi thu gom (status done)
-}
-
-// ─── Collector (Người thu gom rác) ─────────────────────────────────────────
-
-export interface Collector {
-  id: string;
-  name: string;
-  phone: string;
-  zones: number[]; // wardId[] phụ trách
-  vehicleId: string;
-  activeReports: number;
+  segmentedImageUrl: string | null;
+  depthImageUrl: string | null;
+  heatmapUrl: string | null;
+  segmentRatio: number | null;       // double precision
+  pollutionScore: number | null;
+  pollutionLevel: string | null;
+  campaignId: string | null;         // UUID liên kết Campaign
 }
 
 // ─── Report (legacy — dùng cho ReportList từ API) ──────────────────────────
