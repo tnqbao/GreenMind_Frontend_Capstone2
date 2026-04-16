@@ -4,14 +4,15 @@ import {
   Dialog, DialogContent, DialogHeader,
   DialogTitle, DialogDescription, DialogFooter,
 } from "@/components/ui/dialog";
-import { Button }   from "@/components/ui/button";
-import { Input }    from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Label }    from "@/components/ui/label";
+import { Label } from "@/components/ui/label";
 import { CampaignRegion } from "@/types/waste-report";
 import { useState } from "react";
 import { getAccessToken } from "@/lib/auth";
 import { AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
+import { createBlog } from "@/services/blog.service";
 
 const API_BASE = "https://vodang-api.gauas.com";
 
@@ -23,14 +24,14 @@ interface CampaignModalProps {
 }
 
 export function CampaignModal({ isOpen, onClose, region, onSuccess }: CampaignModalProps) {
-  const [name,        setName]        = useState("");
+  const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [startDate,   setStartDate]   = useState("");
-  const [endDate,     setEndDate]     = useState("");
-  const [radius,      setRadius]      = useState(500);
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [radius, setRadius] = useState(500);
 
   const [loading, setLoading] = useState(false);
-  const [error,   setError]   = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
   if (!isOpen || !region) return null;
@@ -59,16 +60,16 @@ export function CampaignModal({ isOpen, onClose, region, onSuccess }: CampaignMo
         description,
         startDate,
         endDate,
-        lat:       region.center.lat,
-        lng:       region.center.lng,
+        lat: region.center.lat,
+        lng: region.center.lng,
         radius,
         reportIds,
       };
 
       const res = await fetch(`${API_BASE}/campaigns`, {
-        method:  "POST",
+        method: "POST",
         headers: {
-          "Content-Type":  "application/json",
+          "Content-Type": "application/json",
           "Authorization": token ? `Bearer ${token}` : "",
         },
         body: JSON.stringify(body),
@@ -78,6 +79,24 @@ export function CampaignModal({ isOpen, onClose, region, onSuccess }: CampaignMo
         const text = await res.text();
         throw new Error(text || `Lỗi ${res.status}`);
       }
+
+      const campaignData = await res.json();
+      const campaignId: string = campaignData?.id ?? campaignData?.data?.id ?? "";
+
+      // Auto-create a community blog post for this campaign (fire-and-forget)
+      const startFormatted = startDate ? new Date(startDate).toLocaleDateString("vi-VN") : "?";
+      const endFormatted = endDate ? new Date(endDate).toLocaleDateString("vi-VN") : "?";
+      const blogContent = `<p><strong>${name}</strong></p>
+<p>${description}</p>
+<p>📅 Thời gian: <strong>${startFormatted}</strong> – <strong>${endFormatted}</strong></p>
+<p>📍 Khu vực: ${region.name}</p>
+${campaignId ? `<p>🔗 <a href="https://vodang-api.gauas.com/campaigns/${campaignId}" target="_blank" rel="noopener">Xem chi tiết chiến dịch</a></p>` : ""}`;
+
+      createBlog({
+        title: `[Chiến dịch] ${name}`,
+        content: blogContent,
+        tags: ["chiến dịch", "tình nguyện"],
+      }).catch(() => { /* silent – campaign already created */ });
 
       setSuccess(true);
       onSuccess?.();
